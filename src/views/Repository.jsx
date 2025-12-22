@@ -92,7 +92,15 @@ const Repository = () => {
                                         )}
                                     </td>
                                     <td className="p-4">
-                                        <div className="font-medium text-white group-hover:text-neon-blue transition-colors">{exp.Title}</div>
+                                        <div className="font-medium text-white transition-colors">
+                                            {exp.url ? (
+                                                <a href={exp.url} target="_blank" rel="noopener noreferrer" className="hover:text-neon-blue transition-colors">
+                                                    {exp.Title}
+                                                </a>
+                                            ) : (
+                                                exp.Title
+                                            )}
+                                        </div>
                                         <div className="text-xs text-gray-500 truncate max-w-md mt-1">{exp.Description}</div>
                                     </td>
                                     <td className="p-4">
