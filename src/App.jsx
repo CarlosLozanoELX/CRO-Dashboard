@@ -1,17 +1,35 @@
 import React, { useState } from 'react';
 import { DataProvider, useData } from './context/DataContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Layout } from './components/Layout';
 import { Overview } from './views/Overview';
 import { Timeline } from './views/Timeline';
 import { Planning } from './views/Planning';
 import Repository from './views/Repository';
 import MapView from './views/Map';
+import Login from './views/Login';
 
-const DashboardContent = () => {
+const GOOGLE_CLIENT_ID = "820974093444-bkouffpu20a75hnff397krtnj9sveubt.apps.googleusercontent.com";
+
+const AppContent = () => {
+    const { user, loading: authLoading } = useAuth();
     const [view, setView] = useState('overview');
-    const { loading, error } = useData();
+    const { loading: dataLoading, error } = useData();
 
-    if (loading) {
+    if (authLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-app-bg">
+                <div className="w-8 h-8 border-2 border-neon-blue/30 border-t-neon-blue rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return <Login />;
+    }
+
+    if (dataLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-app-bg">
                 <div className="flex flex-col items-center gap-4">
@@ -61,9 +79,13 @@ const DashboardContent = () => {
 
 function App() {
     return (
-        <DataProvider>
-            <DashboardContent />
-        </DataProvider>
+        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+            <AuthProvider>
+                <DataProvider>
+                    <AppContent />
+                </DataProvider>
+            </AuthProvider>
+        </GoogleOAuthProvider>
     );
 }
 

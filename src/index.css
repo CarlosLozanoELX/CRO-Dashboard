@@ -6,6 +6,7 @@
   :root {
     --bg-app: #050505;
     --text-primary: #FFFFFF;
+    color-scheme: dark;
   }
 
   body {

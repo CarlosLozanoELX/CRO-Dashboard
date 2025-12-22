@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, CalendarDays, KanbanSquare, Globe, ArrowRight, List, Filter } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { Select } from './Select';
 
 const NavItem = ({ icon, label, active, onClick }) => (
@@ -18,6 +19,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 export const Layout = ({ children, currentView, onViewChange }) => {
     const { filters, updateFilter, options } = useData();
+    const { user, logout } = useAuth();
 
     return (
         <div className="min-h-screen bg-app-bg flex flex-col text-text-primary">
@@ -69,26 +71,48 @@ export const Layout = ({ children, currentView, onViewChange }) => {
                         </nav>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-card-bg/50 backdrop-blur-md rounded-lg p-2 border border-white/10 hover:border-neon-blue/30 transition-all group shadow-sm hover:shadow-glow-blue/5">
-                        <div className="flex items-center gap-2 pl-1">
-                            <span className="text-neon-blue/60 text-[10px] uppercase tracking-widest font-bold">from</span>
-                            <input
-                                type="date"
-                                className="bg-transparent text-white text-xs outline-none font-mono cursor-pointer [&::-webkit-calendar-picker-indicator]:invert pr-1 border-b border-white/5 focus:border-neon-blue/40 transition-colors"
-                                value={filters.dateRange.start ? filters.dateRange.start.toISOString().split('T')[0] : ''}
-                                onChange={(e) => updateFilter('dateRange', { ...filters.dateRange, start: e.target.value ? new Date(e.target.value) : null })}
-                            />
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-3 bg-card-bg/50 backdrop-blur-md rounded-lg p-2 border border-white/10 hover:border-neon-blue/30 transition-all group shadow-sm hover:shadow-glow-blue/5">
+                            <div className="flex items-center gap-2 pl-1">
+                                <span className="text-neon-blue/60 text-[10px] uppercase tracking-widest font-bold">from</span>
+                                <input
+                                    type="date"
+                                    className="bg-transparent text-white text-xs outline-none font-mono cursor-pointer [&::-webkit-calendar-picker-indicator]:invert pr-1 border-b border-white/5 focus:border-neon-blue/40 transition-colors"
+                                    value={filters.dateRange.start ? filters.dateRange.start.toISOString().split('T')[0] : ''}
+                                    onChange={(e) => updateFilter('dateRange', { ...filters.dateRange, start: e.target.value ? new Date(e.target.value) : null })}
+                                />
+                            </div>
+                            <div className="w-px h-6 bg-white/10"></div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-neon-blue/60 text-[10px] uppercase tracking-widest font-bold">to</span>
+                                <input
+                                    type="date"
+                                    className="bg-transparent text-white text-xs outline-none font-mono cursor-pointer [&::-webkit-calendar-picker-indicator]:invert pr-1 border-b border-white/5 focus:border-neon-blue/40 transition-colors"
+                                    value={filters.dateRange.end ? filters.dateRange.end.toISOString().split('T')[0] : ''}
+                                    onChange={(e) => updateFilter('dateRange', { ...filters.dateRange, end: e.target.value ? new Date(e.target.value) : null })}
+                                />
+                            </div>
                         </div>
-                        <div className="w-px h-6 bg-white/10"></div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-neon-blue/60 text-[10px] uppercase tracking-widest font-bold">to</span>
-                            <input
-                                type="date"
-                                className="bg-transparent text-white text-xs outline-none font-mono cursor-pointer [&::-webkit-calendar-picker-indicator]:invert pr-1 border-b border-white/5 focus:border-neon-blue/40 transition-colors"
-                                value={filters.dateRange.end ? filters.dateRange.end.toISOString().split('T')[0] : ''}
-                                onChange={(e) => updateFilter('dateRange', { ...filters.dateRange, end: e.target.value ? new Date(e.target.value) : null })}
-                            />
-                        </div>
+
+                        {user && (
+                            <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+                                <div className="text-right hidden md:block">
+                                    <p className="text-xs font-bold text-white leading-none">{user.name}</p>
+                                    <button
+                                        onClick={logout}
+                                        className="text-[10px] text-gray-500 hover:text-neon-pink uppercase tracking-widest transition-colors font-bold mt-1"
+                                    >
+                                        Sign Out
+                                    </button>
+                                </div>
+                                <img
+                                    src={user.picture}
+                                    alt={user.name}
+                                    className="w-8 h-8 rounded-lg border border-white/10 shadow-sm"
+                                    referrerPolicy="no-referrer"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </header>
