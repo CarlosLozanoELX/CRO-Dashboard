@@ -69,22 +69,22 @@ export const Layout = ({ children, currentView, onViewChange }) => {
                         </nav>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-white/5 rounded-lg p-2 border border-white/10 hover:border-white/20 transition-colors group">
-                        <div className="flex items-center gap-2">
-                            <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">from</span>
+                    <div className="flex items-center gap-3 bg-card-bg/50 backdrop-blur-md rounded-lg p-2 border border-white/10 hover:border-neon-blue/30 transition-all group shadow-sm hover:shadow-glow-blue/5">
+                        <div className="flex items-center gap-2 pl-1">
+                            <span className="text-neon-blue/60 text-[10px] uppercase tracking-widest font-bold">from</span>
                             <input
                                 type="date"
-                                className="bg-transparent text-white text-sm outline-none font-mono cursor-pointer [&::-webkit-calendar-picker-indicator]:invert"
+                                className="bg-transparent text-white text-xs outline-none font-mono cursor-pointer [&::-webkit-calendar-picker-indicator]:invert pr-1 border-b border-white/5 focus:border-neon-blue/40 transition-colors"
                                 value={filters.dateRange.start ? filters.dateRange.start.toISOString().split('T')[0] : ''}
                                 onChange={(e) => updateFilter('dateRange', { ...filters.dateRange, start: e.target.value ? new Date(e.target.value) : null })}
                             />
                         </div>
-                        <div className="w-px h-4 bg-white/20"></div>
+                        <div className="w-px h-6 bg-white/10"></div>
                         <div className="flex items-center gap-2">
-                            <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">to</span>
+                            <span className="text-neon-blue/60 text-[10px] uppercase tracking-widest font-bold">to</span>
                             <input
                                 type="date"
-                                className="bg-transparent text-white text-sm outline-none font-mono cursor-pointer [&::-webkit-calendar-picker-indicator]:invert"
+                                className="bg-transparent text-white text-xs outline-none font-mono cursor-pointer [&::-webkit-calendar-picker-indicator]:invert pr-1 border-b border-white/5 focus:border-neon-blue/40 transition-colors"
                                 value={filters.dateRange.end ? filters.dateRange.end.toISOString().split('T')[0] : ''}
                                 onChange={(e) => updateFilter('dateRange', { ...filters.dateRange, end: e.target.value ? new Date(e.target.value) : null })}
                             />

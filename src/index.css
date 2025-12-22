@@ -26,6 +26,11 @@
   ::-webkit-scrollbar-thumb {
     @apply bg-gray-700 rounded-full hover:bg-neon-blue transition-colors;
   }
+
+  /* Global Date Input Styling */
+  input[type="date"] {
+    color-scheme: dark;
+  }
 }
 
 @layer utilities {
