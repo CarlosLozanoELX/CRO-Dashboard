@@ -35,7 +35,15 @@ const KanbanCard = ({ item }) => {
                 )}
                 <span className="text-[10px] text-gray-400">{item.workstream}</span>
             </div>
-            <h4 className="text-sm font-medium text-gray-200 mb-2 leading-tight group-hover:text-white transition-colors">{item['Title']}</h4>
+            <h4 className="text-sm font-medium text-gray-200 mb-2 leading-tight transition-colors">
+                {item.url ? (
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="hover:text-neon-blue transition-colors">
+                        {item['Title']}
+                    </a>
+                ) : (
+                    item['Title']
+                )}
+            </h4>
 
             <div className="flex flex-wrap gap-1 mt-2">
                 {item.allMarkets.slice(0, 3).map(m => (
