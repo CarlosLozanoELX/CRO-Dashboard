@@ -9,6 +9,7 @@ import { Planning } from './views/Planning';
 import Repository from './views/Repository';
 import MapView from './views/Map';
 import Login from './views/Login';
+import Blank from './views/Blank';
 
 const GOOGLE_CLIENT_ID = "820974093444-bkouffpu20a75hnff397krtnj9sveubt.apps.googleusercontent.com";
 
@@ -66,6 +67,7 @@ const AppContent = () => {
             case 'planning': return <Planning />;
             case 'repository': return <Repository />;
             case 'map': return <MapView />;
+            case 'blank': return <Blank />;
             default: return <Overview />;
         }
     };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, CalendarDays, KanbanSquare, Globe, ArrowRight, List, Filter } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, KanbanSquare, Globe, ArrowRight, List, Filter, SquareDashed } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { Select } from './Select';
@@ -67,6 +67,12 @@ export const Layout = ({ children, currentView, onViewChange }) => {
                                 label="Map"
                                 active={currentView === 'map'}
                                 onClick={() => onViewChange('map')}
+                            />
+                            <NavItem
+                                icon={<SquareDashed size={18} />}
+                                label="Blank"
+                                active={currentView === 'blank'}
+                                onClick={() => onViewChange('blank')}
                             />
                         </nav>
                     </div>
