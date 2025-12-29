@@ -11,8 +11,7 @@ const PLANNING_PHASES = [
     'QA',
     'Sign off',
     'Running',
-    'Analysis',
-    'Completed'
+    'Analysis'
 ];
 
 const PHASE_COLORS = {
@@ -22,8 +21,7 @@ const PHASE_COLORS = {
     'QA': '#FCEE0A',          // Neon Yellow
     'Sign off': '#0AFF99',    // Neon Green
     'Running': '#FF003C',     // Neon Pink
-    'Analysis': '#FF8A00',    // Neon Orange
-    'Completed': '#3F3F46'    // Zinc-700
+    'Analysis': '#FF8A00'     // Neon Orange
 };
 
 const KanbanCard = ({ item }) => {
@@ -160,7 +158,7 @@ export const Planning = () => {
 
             {/* Kanban Board */}
             <div className="overflow-x-auto pb-4">
-                <div className="min-w-[1800px] grid grid-cols-8 gap-4">
+                <div className="min-w-[1600px] grid grid-cols-7 gap-4">
                     {PLANNING_PHASES.map(phase => (
                         <div key={phase} className="flex flex-col">
                             <div className={`flex items-center justify-between p-3 rounded-t-xl border-t-4 mb-2 bg-card-bg/50 backdrop-blur-sm`} style={{ borderColor: PHASE_COLORS[phase] }}>
