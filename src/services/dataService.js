@@ -76,19 +76,35 @@ const processData = (data) => {
     let result = row['Result'] || 'Unknown';
     if (result.toLowerCase() === 'looser') result = 'Loser';
 
+    const today = new Date();
+    const isOverdue = statusClean === 'Running' && endDate && endDate < today;
+    const isDelayed = (statusClean === 'Planning' || statusClean === 'Development') && startDate && startDate < today;
+    const isCompleted = statusClean === 'Completed' || (endDate && endDate < today);
+
+    // Smart Status for UI display
+    let displayStatus = statusClean;
+    if (isOverdue) displayStatus = 'Completed'; // Auto-categorize as completed if date passed
+    if (statusClean === 'Running' && endDate && endDate < today) {
+      displayStatus = 'Analysis'; // Items that just finished are usually in Analysis
+    }
+
     return {
       ...row,
-      id: row['ID'], // Ensure we have a clean lower-case id key if needed, or just use ID
+      id: row['ID'],
       cleanDescription,
       elxMarkets,
       aegMarkets,
       allMarkets,
       statusClean,
+      displayStatus,
+      isOverdue,
+      isDelayed,
+      isCompleted,
       startDate,
       endDate,
       dateCreated,
       resultNormalized: result,
-      workstream: row['Category Name'] || 'Unassigned', // Using Category Name as Workstream proxy
+      workstream: row['Category Name'] || 'Unassigned',
       url: row['URL'] || ''
     };
   });

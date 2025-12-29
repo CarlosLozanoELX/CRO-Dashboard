@@ -10,7 +10,9 @@ const PLANNING_PHASES = [
     'Development',
     'QA',
     'Sign off',
-    'Running'
+    'Running',
+    'Analysis',
+    'Completed'
 ];
 
 const PHASE_COLORS = {
@@ -19,20 +21,30 @@ const PHASE_COLORS = {
     'Development': '#00F0FF', // Neon Blue
     'QA': '#FCEE0A',          // Neon Yellow
     'Sign off': '#0AFF99',    // Neon Green
-    'Running': '#FF003C'      // Neon Pink/Red for Running
+    'Running': '#FF003C',     // Neon Pink
+    'Analysis': '#FF8A00',    // Neon Orange
+    'Completed': '#3F3F46'    // Zinc-700
 };
 
 const KanbanCard = ({ item }) => {
     return (
         <div className="bg-card-bg/40 border border-white/5 rounded-lg p-3 mb-3 hover:bg-white/10 transition-colors cursor-pointer group shadow-sm hover:shadow-glow-blue/10 hover:border-neon-blue/20">
             <div className="flex justify-between items-start mb-1">
-                {item.url ? (
-                    <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[10px] font-mono font-bold text-neon-blue/80 bg-neon-blue/10 px-1.5 py-0.5 rounded hover:bg-neon-blue hover:text-white transition-colors">
-                        {item['Idea Code']}
-                    </a>
-                ) : (
-                    <span className="text-[10px] font-mono font-bold text-neon-blue/80 bg-neon-blue/10 px-1.5 py-0.5 rounded">{item['Idea Code']}</span>
-                )}
+                <div className="flex gap-2 items-center">
+                    {item.url ? (
+                        <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[10px] font-mono font-bold text-neon-blue/80 bg-neon-blue/10 px-1.5 py-0.5 rounded hover:bg-neon-blue hover:text-white transition-colors">
+                            {item['Idea Code']}
+                        </a>
+                    ) : (
+                        <span className="text-[10px] font-mono font-bold text-neon-blue/80 bg-neon-blue/10 px-1.5 py-0.5 rounded">{item['Idea Code']}</span>
+                    )}
+                    {item.isOverdue && (
+                        <span className="text-[8px] bg-neon-pink/20 text-neon-pink border border-neon-pink/30 px-1 rounded animate-pulse font-bold tracking-tighter">OVERDUE</span>
+                    )}
+                    {item.isDelayed && (
+                        <span className="text-[8px] bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/30 px-1 rounded font-bold tracking-tighter">DELAYED</span>
+                    )}
+                </div>
                 <span className="text-[10px] text-gray-400">{item.workstream}</span>
             </div>
             <h4 className="text-sm font-medium text-gray-200 mb-2 leading-tight transition-colors">
@@ -78,10 +90,10 @@ const CustomTooltip = ({ active, payload, label }) => {
 export const Planning = () => {
     const { filteredData } = useData();
 
-    // Filter for Planning items only
+    // Filter for Planning items only (those that map to one of our phases via displayStatus)
     const planningData = useMemo(() => {
         return filteredData.filter(d => {
-            return PLANNING_PHASES.some(phase => d.statusClean.includes(phase));
+            return PLANNING_PHASES.includes(d.displayStatus);
         });
     }, [filteredData]);
 
@@ -91,8 +103,9 @@ export const Planning = () => {
         PLANNING_PHASES.forEach(p => counts[p] = 0);
 
         planningData.forEach(d => {
-            const phase = PLANNING_PHASES.find(p => d.statusClean.includes(p));
-            if (phase) counts[phase]++;
+            if (counts[d.displayStatus] !== undefined) {
+                counts[d.displayStatus]++;
+            }
         });
 
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
@@ -103,8 +116,9 @@ export const Planning = () => {
         const columns = {};
         PLANNING_PHASES.forEach(p => columns[p] = []);
         planningData.forEach(d => {
-            const phase = PLANNING_PHASES.find(p => d.statusClean.includes(p));
-            if (phase) columns[phase].push(d);
+            if (columns[d.displayStatus]) {
+                columns[d.displayStatus].push(d);
+            }
         });
         return columns;
     }, [planningData]);
@@ -146,7 +160,7 @@ export const Planning = () => {
 
             {/* Kanban Board */}
             <div className="overflow-x-auto pb-4">
-                <div className="min-w-[1400px] grid grid-cols-6 gap-4">
+                <div className="min-w-[1800px] grid grid-cols-8 gap-4">
                     {PLANNING_PHASES.map(phase => (
                         <div key={phase} className="flex flex-col">
                             <div className={`flex items-center justify-between p-3 rounded-t-xl border-t-4 mb-2 bg-card-bg/50 backdrop-blur-sm`} style={{ borderColor: PHASE_COLORS[phase] }}>

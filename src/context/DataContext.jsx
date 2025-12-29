@@ -13,7 +13,7 @@ export const DataProvider = ({ children }) => {
     // Global Filters
     const [filters, setFilters] = useState({
         dateRange: {
-            start: subDays(new Date(), 305),
+            start: subDays(new Date(), 60),
             end: addDays(new Date(), 60)
         },
         workstream: 'All',
