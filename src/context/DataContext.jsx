@@ -13,7 +13,7 @@ export const DataProvider = ({ children }) => {
     // Global Filters
     const [filters, setFilters] = useState({
         dateRange: {
-            start: subDays(new Date(), 60),
+            start: subDays(new Date(), 305),
             end: addDays(new Date(), 60)
         },
         workstream: 'All',
@@ -64,7 +64,10 @@ export const DataProvider = ({ children }) => {
 
             // Date Range Filter (Checks if experiment overlaps with selected range)
             if (filters.dateRange.start && filters.dateRange.end) {
-                if (!item.startDate || !item.endDate) return false; // Or decide how to handle missing dates
+                // If an experiment is missing dates, we show it (don't filter it out)
+                // This ensures Planning/Design items without schedules yet are visible
+                if (!item.startDate || !item.endDate) return true;
+
                 // Overlap logic: StartA <= EndB && EndA >= StartB
                 const startA = item.startDate;
                 const endA = item.endDate;

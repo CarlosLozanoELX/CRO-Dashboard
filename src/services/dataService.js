@@ -40,21 +40,32 @@ const processData = (data) => {
     // 4. Normalize Dates
     // Formats: "YYYY-MM-DD hh:mm:ss" or "DD/MM/YYYY"
     const parseDate = (dateStr) => {
-      if (!dateStr) return null;
+      if (!dateStr || typeof dateStr !== 'string') return null;
+
+      const trimmedDate = dateStr.trim();
+      if (!trimmedDate) return null;
+
+      // Try native parse first for standard ISO-like strings
+      const nativeDate = new Date(trimmedDate);
+      if (isValid(nativeDate) && trimmedDate.includes('-') && trimmedDate.length >= 10) {
+        return nativeDate;
+      }
 
       const formats = [
         'yyyy-MM-dd HH:mm:ss',
-        'MM/dd/yyyy', // Moved up: US format seems to be the source based on "01/16/2026"
-        'MM/dd/yy',   // Moved up
-        'dd/MM/yyyy', // Moved down: Only tried if US format fails (e.g. 13/01/2025)
+        'MM/dd/yyyy',
+        'MM/dd/yy',
+        'dd/MM/yyyy',
+        'dd/MM/yy',
         'yyyy-MM-dd',
         'M/d/yyyy',
         'M/d/yy',
-        'd/M/yyyy'
+        'd/M/yyyy',
+        'd/M/yy'
       ];
 
       for (const fmt of formats) {
-        const date = parse(dateStr, fmt, new Date());
+        const date = parse(trimmedDate, fmt, new Date());
         if (isValid(date)) {
           // Fix for 2-digit years being parsed as 00xx (e.g. 25 -> 0025)
           const year = date.getFullYear();
@@ -82,11 +93,14 @@ const processData = (data) => {
     const isCompleted = statusClean === 'Completed' || (endDate && endDate < today);
 
     // Smart Status for UI display
+    // PREVIOUS: We were re-categorizing 'Running' as 'Completed' or 'Analysis' if date passed.
+    // USER REQUEST: 'Live' (Running) should match the DB. 
+    // We will keep displayStatus close to statusClean but prioritize the DB source of truth.
     let displayStatus = statusClean;
-    if (isOverdue) displayStatus = 'Completed'; // Auto-categorize as completed if date passed
-    if (statusClean === 'Running' && endDate && endDate < today) {
-      displayStatus = 'Analysis'; // Items that just finished are usually in Analysis
-    }
+
+    // If status is 'Running', it SHOULD stay 'Running' unless the user manually changes it in DB.
+    // We only use 'Analysis' or 'Completed' display categories if the base status says so.
+    // However, we preserve the 'isOverdue'/'isDelayed' flags for UI indicators.
 
     return {
       ...row,

@@ -10,7 +10,7 @@ const PLANNING_PHASES = [
     'Development',
     'QA',
     'Sign off',
-    'Running',
+    'Running',  // This maps to "Live" in the user's mind
     'Analysis'
 ];
 

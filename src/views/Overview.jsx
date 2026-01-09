@@ -49,10 +49,11 @@ export const Overview = () => {
             ? Math.round((winners.length / resultsWithOutcomes.length) * 100)
             : 0;
 
-        // "Completed" count can still reflect statusClean === 'Completed' even if result is unknown,
-        // OR we can align it too. Let's keep "Completed" as status-based for the count card, 
-        // but clarify Win Rate is "of results".
-        const completedCount = filteredData.filter(d => d.statusClean === 'Completed').length;
+        // "Completed" count: Only count items with "Completed" status AND valid dates 
+        // that fall within the current dashboard range.
+        const completedCount = filteredData.filter(d =>
+            d.statusClean === 'Completed' && d.startDate && d.endDate
+        ).length;
 
         return {
             total: filteredData.length,

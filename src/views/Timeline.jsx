@@ -61,18 +61,31 @@ const GanttChart = ({ data }) => {
         const preferredOrder = ['Homepage', 'Product Page', 'Product Listing Page', 'Checkout', 'Landing Page'];
 
         data.forEach(item => {
-            if (!item.startDate || !item.endDate) {
-                return;
+            let start = item.startDate;
+            let end = item.endDate;
+
+            // Relax date requirement: Fallback if one is missing
+            if (!start && !end) return; // Still skip if absolutely no dates
+
+            if (!start && end) {
+                start = addDays(end, -14); // Assume 2 week duration ending at 'end'
+            } else if (start && !end) {
+                end = addDays(start, 14); // Assume 2 week duration starting at 'start'
             }
+
             // Only include if overlaps with view range
-            if (item.endDate < startDate || item.startDate > endDate) {
-                // console.log('Skipping item (out of range):', item['Idea Code'], format(item.startDate, 'yyyy-MM-dd'), format(item.endDate, 'yyyy-MM-dd'));
+            if (end < startDate || start > endDate) {
                 return;
             }
 
             const type = item['Page Type'] || 'Other';
             if (!groups[type]) groups[type] = [];
-            groups[type].push(item);
+
+            // Use derived dates for positioning but keep original for metadata if needed
+            // Actually Timeline uses item.startDate/endDate for rendering below, 
+            // so we should probably attach the derived ones to the item copy
+            const itemWithDates = { ...item, startDate: start, endDate: end };
+            groups[type].push(itemWithDates);
         });
 
         // Sort keys based on preferred order + others
