@@ -34,16 +34,18 @@ const CustomTooltip = ({ active, payload, label }) => {
 export const Overview = () => {
     const { filteredData, filters } = useData();
 
-    // --- Metrics Calculations ---
-    // --- Metrics Calculations ---
-    const metrics = useMemo(() => {
-        // User expects metrics to strictly reflect items that STARTED within the selected range
-        // instead of just overlapping. This avoids pollution from very old experiments.
-        const inRangeData = filteredData.filter(d => {
-            if (!d.startDate) return false; // Exclude items without dates from these specific totals
+    // --- Data Alignment ---
+    // Consolidate the "Start Date in Range" logic for the entire Overview page.
+    // This ensures consistency between metric cards and charts.
+    const inRangeData = useMemo(() => {
+        return filteredData.filter(d => {
+            if (!d.startDate) return false;
             return d.startDate >= filters.dateRange.start && d.startDate <= filters.dateRange.end;
         });
+    }, [filteredData, filters.dateRange.start, filters.dateRange.end]);
 
+    // --- Metrics Calculations ---
+    const metrics = useMemo(() => {
         const resultsWithOutcomes = inRangeData.filter(d =>
             ['Winner', 'Loser', 'Inconclusive'].includes(d.resultNormalized)
         );
@@ -54,7 +56,6 @@ export const Overview = () => {
             ? Math.round((winners.length / resultsWithOutcomes.length) * 100)
             : 0;
 
-        // "Completed" count: Redefined as any experiment with a definitive result that started in range.
         const completedCount = resultsWithOutcomes.length;
 
         return {
@@ -63,26 +64,26 @@ export const Overview = () => {
             winners: winners.length,
             winRate
         };
-    }, [filteredData, filters.dateRange]);
+    }, [inRangeData]);
 
     // --- Chart Data Preparation ---
 
     // 1. Journeys (Workstream) Distribution
     const workstreamData = useMemo(() => {
         const counts = {};
-        filteredData.forEach(d => {
+        inRangeData.forEach(d => {
             const key = d.workstream || 'Unassigned';
             counts[key] = (counts[key] || 0) + 1;
         });
         return Object.entries(counts)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value);
-    }, [filteredData]);
+    }, [inRangeData]);
 
     // 2. Page Type Distribution
     const pageTypeData = useMemo(() => {
         const counts = {};
-        filteredData.forEach(d => {
+        inRangeData.forEach(d => {
             const key = d['Page Type'];
             if (key && key !== 'Unknown') { // Filter out Unknown
                 counts[key] = (counts[key] || 0) + 1;
@@ -91,7 +92,7 @@ export const Overview = () => {
         return Object.entries(counts)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value);
-    }, [filteredData]);
+    }, [inRangeData]);
 
     // Helper for Pie Label
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
@@ -123,7 +124,7 @@ export const Overview = () => {
             'Loser': 0,
             'Inconclusive': 0
         };
-        filteredData.forEach(d => {
+        inRangeData.forEach(d => {
             const result = d.resultNormalized;
             if (result && counts.hasOwnProperty(result)) {
                 counts[result]++;
@@ -131,21 +132,21 @@ export const Overview = () => {
         });
         return Object.entries(counts)
             .map(([name, value]) => ({ name, value }))
-            .filter(item => item.value > 0) // Optional: filter out if 0? better to keep to show 0 if explicitly asked for only those 3
+            .filter(item => item.value > 0)
             .sort((a, b) => b.value - a.value);
-    }, [filteredData]);
+    }, [inRangeData]);
 
     // 4. Trend Data (Experiments over time)
     const trendData = useMemo(() => {
         const monthlyData = {};
 
-        filteredData.forEach(d => {
+        inRangeData.forEach(d => {
             if (d.startDate) {
                 const monthYear = format(new Date(d.startDate), 'MMM yyyy');
                 if (!monthlyData[monthYear]) {
                     monthlyData[monthYear] = { completed: 0, winners: 0 };
                 }
-                if (d.statusClean === 'Completed' || d.resultNormalized !== 'Unknown') {
+                if (['Winner', 'Loser', 'Inconclusive'].includes(d.resultNormalized)) {
                     monthlyData[monthYear].completed += 1;
                     if (d.resultNormalized === 'Winner') {
                         monthlyData[monthYear].winners += 1;
@@ -166,7 +167,7 @@ export const Overview = () => {
             completed: monthlyData[month].completed,
             winners: monthlyData[month].winners
         }));
-    }, [filteredData]);
+    }, [inRangeData]);
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
