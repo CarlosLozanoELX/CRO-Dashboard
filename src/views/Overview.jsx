@@ -32,7 +32,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export const Overview = () => {
-    const { filteredData } = useData();
+    const { filteredData, filters } = useData();
 
     // --- Metrics Calculations ---
     // --- Metrics Calculations ---
