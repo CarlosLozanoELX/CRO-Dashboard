@@ -37,31 +37,33 @@ export const Overview = () => {
     // --- Metrics Calculations ---
     // --- Metrics Calculations ---
     const metrics = useMemo(() => {
-        // Only include experiments with a definitive result for the Win Rate calculation
-        // This ensures consistency with the Results Breakdown pie chart
-        const resultsWithOutcomes = filteredData.filter(d =>
+        // User expects metrics to strictly reflect items that STARTED within the selected range
+        // instead of just overlapping. This avoids pollution from very old experiments.
+        const inRangeData = filteredData.filter(d => {
+            if (!d.startDate) return false; // Exclude items without dates from these specific totals
+            return d.startDate >= filters.dateRange.start && d.startDate <= filters.dateRange.end;
+        });
+
+        const resultsWithOutcomes = inRangeData.filter(d =>
             ['Winner', 'Loser', 'Inconclusive'].includes(d.resultNormalized)
         );
+
         const winners = resultsWithOutcomes.filter(d => d.resultNormalized === 'Winner');
 
-        // Win Rate = Winners / (Winners + Losers + Inconclusive)
         const winRate = resultsWithOutcomes.length > 0
             ? Math.round((winners.length / resultsWithOutcomes.length) * 100)
             : 0;
 
-        // "Completed" count: Only count items with "Completed" status AND valid dates 
-        // that fall within the current dashboard range.
-        const completedCount = filteredData.filter(d =>
-            d.statusClean === 'Completed' && d.startDate && d.endDate
-        ).length;
+        // "Completed" count: Redefined as any experiment with a definitive result that started in range.
+        const completedCount = resultsWithOutcomes.length;
 
         return {
-            total: filteredData.length,
+            total: inRangeData.length,
             completed: completedCount,
             winners: winners.length,
             winRate
         };
-    }, [filteredData]);
+    }, [filteredData, filters.dateRange]);
 
     // --- Chart Data Preparation ---
 
