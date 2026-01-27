@@ -1,90 +1,52 @@
-import Papa from 'papaparse';
-import { parse, isValid, format } from 'date-fns';
+import { parse, isValid } from 'date-fns';
+import { createClient } from '@supabase/supabase-js';
 
-const SHEET_ID = '1GyEh5_D5uM1yETFZByUQmz44uuBYdZrcvilayJJK6OA';
-const GID = '0';
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+const SUPABASE_URL = 'https://byjysjabscpnbxwomhac.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5anlzamFic2NwbmJ4d29taGFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MDU0MjUsImV4cCI6MjA4NTA4MTQyNX0.F-S_M_2V35mI0bF3f0f7tJ3n9O6zW2X8vU9jW4r4Y6I'; // Usa tu ANON key aquí
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const fetchExperimentData = async () => {
-  return new Promise((resolve, reject) => {
-    Papa.parse(CSV_URL, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const cleanedData = processData(results.data);
-        resolve(cleanedData);
-      },
-      error: (error) => {
-        reject(error);
-      }
-    });
-  });
+  const { data, error } = await supabase
+    .from('experiments')
+    .select('*')
+    .order('date_created', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching from Supabase:', error);
+    throw error;
+  }
+
+  return processData(data);
 };
 
 const processData = (data) => {
   return data.map(row => {
     // 1. Clean Description (remove HTML)
-    const cleanDescription = row['Description']?.replace(/<[^>]*>?/gm, '') || '';
+    const cleanDescription = row['description']?.replace(/<[^>]*>?/gm, '') || '';
 
     // 2. Parse Markets (comma separated -> array)
-    const elxMarkets = row['ELX markets'] ? row['ELX markets'].split(',').map(m => m.trim()) : [];
-    const aegMarkets = row['AEG Markets'] ? row['AEG Markets'].split(',').map(m => m.trim()) : [];
+    const elxMarkets = row['elx_markets'] ? row['elx_markets'].split(',').map(m => m.trim()) : [];
+    const aegMarkets = row['aeg_markets'] ? row['aeg_markets'].split(',').map(m => m.trim()) : [];
     const allMarkets = [...new Set([...elxMarkets, ...aegMarkets])];
 
     // 3. Clean Status Name (remove leading numbers)
-    // e.g., "3 Planning" -> "Planning"
-    const statusRaw = row['Status Name'] || '';
+    const statusRaw = row['status_name'] || '';
     const statusClean = statusRaw.replace(/^\d+\s+/, '');
 
     // 4. Normalize Dates
-    // Formats: "YYYY-MM-DD hh:mm:ss" or "DD/MM/YYYY"
     const parseDate = (dateStr) => {
       if (!dateStr || typeof dateStr !== 'string') return null;
-
-      const trimmedDate = dateStr.trim();
-      if (!trimmedDate) return null;
-
-      // Try native parse first for standard ISO-like strings
-      const nativeDate = new Date(trimmedDate);
-      if (isValid(nativeDate) && trimmedDate.includes('-') && trimmedDate.length >= 10) {
-        return nativeDate;
-      }
-
-      const formats = [
-        'yyyy-MM-dd HH:mm:ss',
-        'MM/dd/yyyy',
-        'MM/dd/yy',
-        'dd/MM/yyyy',
-        'dd/MM/yy',
-        'yyyy-MM-dd',
-        'M/d/yyyy',
-        'M/d/yy',
-        'd/M/yyyy',
-        'd/M/yy'
-      ];
-
-      for (const fmt of formats) {
-        const date = parse(trimmedDate, fmt, new Date());
-        if (isValid(date)) {
-          // Fix for 2-digit years being parsed as 00xx (e.g. 25 -> 0025)
-          const year = date.getFullYear();
-          if (year < 100) {
-            date.setFullYear(year + 2000);
-          }
-          return date;
-        }
-      }
-
-      return null;
+      const date = new Date(dateStr);
+      return isValid(date) ? date : null;
     };
 
-    const startDate = parseDate(row['Start Date']);
-    const endDate = parseDate(row['End Date']);
-    const dateCreated = parseDate(row['Date Created']);
+    const startDate = parseDate(row['start_date']);
+    const endDate = parseDate(row['end_date']);
+    const dateCreated = parseDate(row['date_created']);
 
     // 5. Normalize Result
-    let result = row['Result'] || 'Unknown';
+    let result = row['result'] || 'Unknown';
     if (result.toLowerCase() === 'looser') result = 'Loser';
 
     const today = new Date();
@@ -92,25 +54,16 @@ const processData = (data) => {
     const isDelayed = (statusClean === 'Planning' || statusClean === 'Development') && startDate && startDate < today;
     const isCompleted = statusClean === 'Completed' || (endDate && endDate < today);
 
-    // Smart Status for UI display
-    // PREVIOUS: We were re-categorizing 'Running' as 'Completed' or 'Analysis' if date passed.
-    // USER REQUEST: 'Live' (Running) should match the DB. 
-    // We will keep displayStatus close to statusClean but prioritize the DB source of truth.
-    let displayStatus = statusClean;
-
-    // If status is 'Running', it SHOULD stay 'Running' unless the user manually changes it in DB.
-    // We only use 'Analysis' or 'Completed' display categories if the base status says so.
-    // However, we preserve the 'isOverdue'/'isDelayed' flags for UI indicators.
-
     return {
       ...row,
-      id: row['ID'],
+      id: row['id'],
+      title: row['title'],
       cleanDescription,
       elxMarkets,
       aegMarkets,
       allMarkets,
       statusClean,
-      displayStatus,
+      displayStatus: statusClean,
       isOverdue,
       isDelayed,
       isCompleted,
@@ -118,8 +71,8 @@ const processData = (data) => {
       endDate,
       dateCreated,
       resultNormalized: result,
-      workstream: row['Category Name'] || 'Unassigned',
-      url: row['URL'] || ''
+      workstream: row['category_name'] || 'Unassigned',
+      url: row['url'] || ''
     };
   });
 };
