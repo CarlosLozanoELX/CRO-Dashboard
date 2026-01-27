@@ -81,7 +81,16 @@ const processData = (data) => {
       dateCreated,
       resultNormalized: result,
       workstream: row['category_name'] || 'Unassigned',
-      url: row['url'] || ''
+      url: row['url'] || '',
+
+      // Backward Compatibility for UI Components
+      'Idea Code': row['id'],
+      'Title': row['title'],
+      'Experiment Name': row['title'],
+      'Description': cleanDescription,
+      'Page Type': row['category_name'] || 'Other',
+      'Status Name': row['status_name'],
+      'Category Name': row['category_name']
     };
   });
 };
