@@ -62,14 +62,22 @@ async function sync() {
         const processedItems = Array.from(uniqueItemsMap.values());
 
         console.log(`Found ${rawRows.length} rows. Cleaned to ${processedItems.length} unique items.`);
-        console.log('Syncing to Supabase...');
+        console.log('Cleaning existing records and syncing to Supabase...');
 
-        // 4. Upsert to Supabase
-        const { error } = await supabase
+        // 4. Clean sync: Delete all records first to avoid duplicates from previous key formats
+        const { error: deleteError } = await supabase
             .from('experiments')
-            .upsert(processedItems, { onConflict: 'id' });
+            .delete()
+            .neq('id', '0'); // Safe delete all
 
-        if (error) throw error;
+        if (deleteError) throw deleteError;
+
+        // 5. Upsert to Supabase
+        const { error: upsertError } = await supabase
+            .from('experiments')
+            .upsert(processedItems);
+
+        if (upsertError) throw upsertError;
 
         console.log('Sync completed successfully!');
     } catch (err) {
