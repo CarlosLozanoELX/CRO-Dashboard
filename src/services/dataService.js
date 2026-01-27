@@ -88,7 +88,21 @@ const processData = (data) => {
       'Title': row['title'],
       'Experiment Name': row['title'],
       'Description': cleanDescription,
-      'Page Type': row['page_type'] || 'Other',
+      'Page Type': (() => {
+        const pt = row['page_type'];
+        if (pt && pt !== 'Other') return pt;
+
+        // Smart detection
+        const category = row['category_name'] || '';
+        const title = row['title'] || '';
+
+        if (category.toLowerCase().includes('checkout') || title.toLowerCase().includes('checkout')) return 'Checkout';
+        if (title.toUpperCase().includes('PDP')) return 'Product Page';
+        if (title.toUpperCase().includes('PLP')) return 'Product Listing Page';
+        if (title.toLowerCase().includes('home')) return 'Homepage';
+
+        return 'Other';
+      })(),
       'Status Name': row['status_name'],
       'Category Name': row['category_name']
     };
