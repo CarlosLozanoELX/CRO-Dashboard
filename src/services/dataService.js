@@ -88,7 +88,7 @@ const processData = (data) => {
       'Title': row['title'],
       'Experiment Name': row['title'],
       'Description': cleanDescription,
-      'Page Type': row['category_name'] || 'Other',
+      'Page Type': row['page_type'] || 'Other',
       'Status Name': row['status_name'],
       'Category Name': row['category_name']
     };

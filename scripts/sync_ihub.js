@@ -36,12 +36,12 @@ async function sync() {
         const uniqueItemsMap = new Map();
 
         rawRows.forEach(row => {
-            const id = row['ID']?.trim();
-            if (!id) return; // Ignorar filas sin ID
+            const id = row['Idea Code']?.trim(); // Usar Idea Code como ID principal
+            if (!id) return;
 
             const item = {
                 id: id,
-                title: row['Experiment Name'] || 'Untitled',
+                title: row['Title'] || 'Untitled',
                 description: row['Description'] || '',
                 status_name: row['Status Name'] || '',
                 category_name: row['Category Name'] || '',
@@ -52,10 +52,10 @@ async function sync() {
                 url: row['URL'] || '',
                 elx_markets: row['ELX markets'] || '',
                 aeg_markets: row['AEG Markets'] || '',
+                page_type: row['Page Type'] || '',
                 updated_at: new Date().toISOString()
             };
 
-            // Si el ID ya existe, el último que aparezca en el CSV ganará
             uniqueItemsMap.set(id, item);
         });
 
