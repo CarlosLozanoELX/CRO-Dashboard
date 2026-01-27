@@ -46,4 +46,13 @@
   .neon-border {
     box-shadow: 0 0 5px theme('colors.neon-blue'), inset 0 0 5px theme('colors.neon-blue');
   }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
 }

@@ -15,20 +15,30 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    const login = (credentialResponse) => {
-        const decoded = jwtDecode(credentialResponse.credential);
+    const login = (payload) => {
+        let userData = null;
 
-        // Authorization Logic: Change this to your company domain
-        const allowedDomain = 'electrolux.com'; // Example domain
-        const isAuthorized = decoded.email.endsWith(`@${allowedDomain}`) ||
-            decoded.email === 'carlos.lozano@electrolux.com'; // Direct whitelist
-
-        if (isAuthorized) {
-            const userData = {
+        if (payload.credential) {
+            // Handle standard GoogleLogin response
+            const decoded = jwtDecode(payload.credential);
+            userData = {
                 name: decoded.name,
                 email: decoded.email,
                 picture: decoded.picture
             };
+        } else if (payload.email) {
+            // Handle pre-processed custom login
+            userData = payload;
+        }
+
+        if (!userData) return false;
+
+        // Authorization Logic
+        const allowedDomain = 'electrolux.com';
+        const isAuthorized = userData.email.endsWith(`@${allowedDomain}`) ||
+            userData.email === 'carlos.lozano@electrolux.com';
+
+        if (isAuthorized) {
             setUser(userData);
             localStorage.setItem('dashboard_user', JSON.stringify(userData));
             return true;

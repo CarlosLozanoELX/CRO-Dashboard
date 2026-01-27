@@ -2,22 +2,31 @@ import { parse, isValid } from 'date-fns';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://byjysjabscpnbxwomhac.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5anlzamFic2NwbmJ4d29taGFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MDU0MjUsImV4cCI6MjA4NTA4MTQyNX0.F-S_M_2V35mI0bF3f0f7tJ3n9O6zW2X8vU9jW4r4Y6I'; // Usa tu ANON key aquí
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5anlzamFic2NwbmJ4d29taGFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MDU0MjUsImV4cCI6MjA4NTA4MTQyNX0.1pHj3Olnjg-TnUYiF1gmmm_cjp8EeNFAoHnL4y172Ao'; // Usa tu ANON key aquí
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const fetchExperimentData = async () => {
-  const { data, error } = await supabase
-    .from('experiments')
-    .select('*')
-    .order('date_created', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('experiments')
+      .select('*')
+      .order('date_created', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching from Supabase:', error);
-    throw error;
+    if (error) {
+      console.error('Supabase fetch error details:', error);
+      throw new Error(`Supabase error: ${error.message} (${error.code})`);
+    }
+
+    if (!data) {
+      throw new Error('No data returned from Supabase.');
+    }
+
+    return processData(data);
+  } catch (err) {
+    console.error('Full connection error:', err);
+    throw err;
   }
-
-  return processData(data);
 };
 
 const processData = (data) => {
