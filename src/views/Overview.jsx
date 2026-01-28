@@ -85,7 +85,8 @@ export const Overview = () => {
         const counts = {};
         inRangeData.forEach(d => {
             const key = d['Page Type'];
-            if (key && key !== 'Unknown') { // Filter out Unknown
+            // Filter out Unknown and any values containing URLs
+            if (key && key !== 'Unknown' && !key.includes('http')) {
                 counts[key] = (counts[key] || 0) + 1;
             }
         });

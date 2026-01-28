@@ -6,22 +6,22 @@ import { differenceInDays, startOfMonth, addDays, endOfMonth, eachMonthOfInterva
 
 const PLANNING_PHASES = [
     'Planning',
-    'Design',
-    'Development',
+    'Design (UX/UI)',
+    'Development in Jira',
     'QA',
-    'Sign off',
+    'PO Sign off',
     'Running',  // This maps to "Live" in the user's mind
     'Analysis'
 ];
 
 const PHASE_COLORS = {
-    'Planning': '#A1A1AA',    // Zinc-400
-    'Design': '#BC13FE',      // Neon Purple
-    'Development': '#00F0FF', // Neon Blue
-    'QA': '#FCEE0A',          // Neon Yellow
-    'Sign off': '#0AFF99',    // Neon Green
-    'Running': '#FF003C',     // Neon Pink
-    'Analysis': '#FF8A00'     // Neon Orange
+    'Planning': '#A1A1AA',           // Zinc-400
+    'Design (UX/UI)': '#BC13FE',     // Neon Purple
+    'Development in Jira': '#00F0FF', // Neon Blue
+    'QA': '#FCEE0A',                 // Neon Yellow
+    'PO Sign off': '#0AFF99',        // Neon Green
+    'Running': '#FF003C',            // Neon Pink
+    'Analysis': '#FF8A00'            // Neon Orange
 };
 
 const KanbanCard = ({ item }) => {

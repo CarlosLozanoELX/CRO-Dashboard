@@ -239,15 +239,15 @@ const GanttChart = ({ data }) => {
                                                         minWidth: '4px'
                                                     }}
                                                 >
-                                                    {widthPct > 8 && (
+                                                    {widthPct > 2 && (
                                                         <div className="flex flex-col overflow-hidden w-full">
                                                             <div className="flex items-center justify-between gap-2 w-full">
                                                                 <span className="font-bold text-[11px] truncate text-white drop-shadow-md">
-                                                                    {item['Idea Code']}
-                                                                    {widthPct > 15 && <span className="font-normal opacity-90 mx-1">- {item['Title']}</span>}
+                                                                    {item['Idea Code'] || item.id}
+                                                                    {widthPct > 12 && <span className="font-normal opacity-90 mx-1">- {item['Title'] || item.title}</span>}
                                                                 </span>
                                                             </div>
-                                                            {widthPct > 15 && (
+                                                            {widthPct > 12 && (
                                                                 <div className="text-[9px] opacity-80 uppercase tracking-wider truncate font-mono mt-[-2px]">
                                                                     {marketDisplay || 'Global'}
                                                                 </div>

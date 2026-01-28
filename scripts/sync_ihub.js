@@ -1,87 +1,208 @@
-/**
- * Spreadsheet to Supabase Sync Script (ESM Version)
- */
-
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
+import fs from 'fs';
 import Papa from 'papaparse';
 
 // --- CONFIGURATION ---
 const SUPABASE_URL = 'https://byjysjabscpnbxwomhac.supabase.co';
 const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5anlzamFic2NwbmJ4d29taGFjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTUwNTQyNSwiZXhwIjoyMDg1MDgxNDI1fQ.39s3tBwcqx9EbWW3HbGICw55Xy02H4A8DJ-WbcKzhXA';
 
+const BRIGHTIDEA_CLIENT_ID = 'b7bbb97ffb7f11f0b1620e34d1a54935';
+const BRIGHTIDEA_CLIENT_SECRET = '81af9e012d7731696ebb803729adcec2';
+const BRIGHTIDEA_CAMPAIGN_ID = '149ED688-5303-11EF-94D4-0AB688EFA52D'; // OR - Experimentation
+const TOKEN_PATH = './.brightidea_tokens.json';
+
 const SHEET_ID = '1GyEh5_D5uM1yETFZByUQmz44uuBYdZrcvilayJJK6OA';
-const DATA_SOURCE_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+const LEGACY_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-async function sync() {
-    console.log('Starting sync from Google Sheets...');
+function stripHtml(html) {
+    if (!html) return '';
+    // Basic HTML tag stripping
+    return html.replace(/<[^>]*>?/gm, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .trim();
+}
 
+async function fetchLegacyResults() {
+    console.log('Fetching legacy results from Google Sheets...');
     try {
-        // 1. Fetch CSV Data
-        const response = await axios.get(DATA_SOURCE_URL);
-        const csvData = response.data;
+        const response = await axios.get(LEGACY_CSV_URL);
+        const parsed = Papa.parse(response.data, { header: true, skipEmptyLines: true });
 
-        // 2. Parse CSV to JSON
-        const parsed = Papa.parse(csvData, {
-            header: true,
-            skipEmptyLines: true
+        const legacyDataMap = new Map();
+        parsed.data.forEach((row, index) => {
+            const uuid = row['ID'];
+            const expCode = row['Idea Code'];
+            const result = row['Result'];
+            const pageType = row['Page Type'];
+
+            const entry = {};
+            if (result && result !== 'Unknown') entry.result = result.trim();
+            if (pageType && !pageType.startsWith('http')) entry.pageType = pageType.trim();
+
+            if (Object.keys(entry).length > 0) {
+                if (uuid) legacyDataMap.set(uuid.trim(), entry);
+                if (expCode) legacyDataMap.set(expCode.trim(), entry);
+            }
         });
 
-        const rawRows = parsed.data;
+        console.log(`Loaded enrichment data for ${legacyDataMap.size} identifiers.`);
+        return legacyDataMap;
+    } catch (err) {
+        console.warn('Could not fetch legacy results, proceeding with API data only:', err.message);
+        return new Map();
+    }
+}
 
-        // 3. Clean and Deduplicate Data
-        // Supabase da error si intentas actualizar el mismo ID dos veces en el mismo batch
-        const uniqueItemsMap = new Map();
+async function getValidToken() {
+    if (!fs.existsSync(TOKEN_PATH)) {
+        throw new Error('Tokens file not found. Run bootstrap first.');
+    }
 
-        rawRows.forEach(row => {
-            const id = row['Idea Code']?.trim(); // Usar Idea Code como ID principal
-            if (!id) return;
+    let tokens = JSON.parse(fs.readFileSync(TOKEN_PATH));
 
-            const item = {
-                id: id,
-                title: row['Title'] || 'Untitled',
-                description: row['Description'] || '',
-                status_name: row['Status Name'] || '',
-                category_name: row['Category Name'] || '',
-                start_date: row['Start Date'] || null,
-                end_date: row['End Date'] || null,
-                date_created: row['Date Created'] || null,
-                result: row['Result'] || 'Unknown',
-                url: row['URL'] || '',
-                elx_markets: row['ELX markets'] || '',
-                aeg_markets: row['AEG Markets'] || '',
-                page_type: row['Page Type'] || '',
-                updated_at: new Date().toISOString()
-            };
+    // Refresh if expired or about to expire (within 5 mins)
+    if (Date.now() > tokens.expires_at - 300000) {
+        console.log('Refreshing BrightIdea token...');
+        const params = new URLSearchParams();
+        params.append('grant_type', 'refresh_token');
+        params.append('client_id', BRIGHTIDEA_CLIENT_ID);
+        params.append('client_secret', BRIGHTIDEA_CLIENT_SECRET);
+        params.append('refresh_token', tokens.refresh_token);
 
-            uniqueItemsMap.set(id, item);
+        const res = await axios.post('https://auth.brightidea.com/_oauth2/token', params.toString(), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
 
-        const processedItems = Array.from(uniqueItemsMap.values());
+        tokens = {
+            access_token: res.data.access_token,
+            refresh_token: res.data.refresh_token || tokens.refresh_token,
+            expires_at: Date.now() + (res.data.expires_in * 1000)
+        };
 
-        console.log(`Found ${rawRows.length} rows. Cleaned to ${processedItems.length} unique items.`);
+        fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2));
+        console.log('Token refreshed successfully.');
+    }
+
+    return tokens.access_token;
+}
+
+async function fetchAllIdeas(accessToken) {
+    let allIdeas = [];
+    let page = 1;
+    let totalPages = 1;
+
+    console.log('Fetching ideas from BrightIdea API...');
+
+    do {
+        console.log(`Fetching page ${page}...`);
+        const res = await axios.get('https://ihub.electrolux.com/api3/idea', {
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+            params: {
+                page: page,
+                page_size: 100,
+                with: 'additional_questions',
+                campaign_id: BRIGHTIDEA_CAMPAIGN_ID
+            }
+        });
+
+        if (res.data && res.data.idea_list) {
+            allIdeas = allIdeas.concat(res.data.idea_list);
+            totalPages = res.data.stats.page_count;
+        }
+        page++;
+    } while (page <= totalPages);
+
+    return allIdeas;
+}
+
+function mapIdeaToExperiment(idea, legacyData) {
+    const questions = idea.additional_questions || [];
+
+    const getAnswer = (desc) => {
+        const q = questions.find(q => q.description && q.description.toLowerCase().includes(desc.toLowerCase()));
+        return q ? q.response_text : null;
+    };
+
+    const id = idea.idea_code || idea.id;
+    const legacy = legacyData.get(id) || {};
+
+    // Result mapping
+    let result = legacy.result || getAnswer('Final Result') || getAnswer('Winner') || 'Unknown';
+    if (result.toLowerCase().includes('winner')) result = 'Winner';
+    if (result.toLowerCase().includes('loser') || result.toLowerCase().includes('looser')) result = 'Loser';
+    if (result.toLowerCase().includes('inconclusive')) result = 'Inconclusive';
+
+    // Page Type mapping & URL filtering
+    let pageType = legacy.pageType || '';
+    if (!pageType) {
+        const suggestedPage = getAnswer('Suggested page');
+        if (suggestedPage && !suggestedPage.startsWith('http')) {
+            pageType = suggestedPage;
+        }
+    }
+
+    return {
+        id: id,
+        title: idea.title || 'Untitled',
+        description: stripHtml(idea.description) || '',
+        status_name: idea.status?.name || 'New',
+        category_name: idea.category?.name || '',
+        start_date: idea.date_created,
+        end_date: idea.campaign?.end_date || null,
+        date_created: idea.date_created,
+        page_type: pageType,
+        elx_markets: getAnswer('What Electrolux market?') || '',
+        aeg_markets: getAnswer('What AEG market?') || '',
+        result: result,
+        url: idea.url || '',
+        updated_at: new Date().toISOString()
+    };
+}
+
+async function sync() {
+    try {
+        const accessToken = await getValidToken();
+
+        // 1. Fetch Legacy Data for Results Enrichment
+        const legacyResults = await fetchLegacyResults();
+
+        // 2. Fetch API Data
+        const ideas = await fetchAllIdeas(accessToken);
+
+        console.log(`Processing ${ideas.length} ideas with Hybrid Enrichment...`);
+        const processedItems = ideas.map(idea => mapIdeaToExperiment(idea, legacyResults));
+
         console.log('Cleaning existing records and syncing to Supabase...');
 
-        // 4. Clean sync: Delete all records first to avoid duplicates from previous key formats
+        // 3. Clean sync
         const { error: deleteError } = await supabase
             .from('experiments')
             .delete()
-            .neq('id', '0'); // Safe delete all
+            .neq('id', '0');
 
         if (deleteError) throw deleteError;
 
-        // 5. Upsert to Supabase
-        const { error: upsertError } = await supabase
-            .from('experiments')
-            .upsert(processedItems);
-
-        if (upsertError) throw upsertError;
+        // 4. Upsert in batches of 100
+        for (let i = 0; i < processedItems.length; i += 100) {
+            const batch = processedItems.slice(i, i + 100);
+            const { error: upsertError } = await supabase
+                .from('experiments')
+                .upsert(batch);
+            if (upsertError) throw upsertError;
+            console.log(`Synced batch ${Math.floor(i / 100) + 1}...`);
+        }
 
         console.log('Sync completed successfully!');
     } catch (err) {
         console.error('Sync failed:', err.message);
+        if (err.response?.data) console.error(JSON.stringify(err.response.data, null, 2));
         process.exit(1);
     }
 }
