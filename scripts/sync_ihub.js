@@ -42,9 +42,14 @@ async function fetchLegacyResults() {
             const result = row['Result'];
             const pageType = row['Page Type'];
 
+            const startDate = row['Start Date'];
+            const endDate = row['End Date'];
+
             const entry = {};
             if (result && result !== 'Unknown') entry.result = result.trim();
             if (pageType && !pageType.startsWith('http')) entry.pageType = pageType.trim();
+            if (startDate) entry.startDate = startDate.trim();
+            if (endDate) entry.endDate = endDate.trim();
 
             if (Object.keys(entry).length > 0) {
                 if (uuid) legacyDataMap.set(uuid.trim(), entry);
@@ -148,18 +153,28 @@ function mapIdeaToExperiment(idea, legacyData) {
         }
     }
 
+    // Market extraction with correct iHub question names
+    const elxMarket = getAnswer('Suggested Electrolux Market') || // Matches "Suggested Electrolux Market/s"
+        getAnswer('What Electrolux market?') ||                   // Legacy fallback
+        getAnswer('Electrolux market') ||
+        '';
+    const aegMarket = getAnswer('Suggested AEG market') ||        // Matches "Suggested AEG market?"
+        getAnswer('What AEG market?') ||                          // Legacy fallback
+        getAnswer('AEG market') ||
+        '';
+
     return {
         id: id,
         title: idea.title || 'Untitled',
         description: stripHtml(idea.description) || '',
         status_name: idea.status?.name || 'New',
         category_name: idea.category?.name || '',
-        start_date: idea.date_created,
-        end_date: idea.campaign?.end_date || null,
+        start_date: legacy.startDate || idea.date_created,
+        end_date: legacy.endDate || idea.campaign?.end_date || null,
         date_created: idea.date_created,
         page_type: pageType,
-        elx_markets: getAnswer('What Electrolux market?') || '',
-        aeg_markets: getAnswer('What AEG market?') || '',
+        elx_markets: elxMarket,
+        aeg_markets: aegMarket,
         result: result,
         url: idea.url || '',
         updated_at: new Date().toISOString()

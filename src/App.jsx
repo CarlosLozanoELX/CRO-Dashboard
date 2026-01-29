@@ -6,6 +6,7 @@ import { Layout } from './components/Layout';
 import { Overview } from './views/Overview';
 import { Timeline } from './views/Timeline';
 import { Planning } from './views/Planning';
+import { Markets } from './views/Markets';
 import Repository from './views/Repository';
 import MapView from './views/Map';
 import Login from './views/Login';
@@ -65,6 +66,7 @@ const AppContent = () => {
             case 'overview': return <Overview />;
             case 'timeline': return <Timeline />;
             case 'planning': return <Planning />;
+            case 'markets': return <Markets />;
             case 'repository': return <Repository />;
             case 'map': return <MapView />;
 

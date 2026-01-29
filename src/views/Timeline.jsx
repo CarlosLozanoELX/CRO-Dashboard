@@ -4,12 +4,12 @@ import { format, differenceInDays, addDays, startOfMonth, endOfMonth, eachMonthO
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 
 const CATEGORY_COLORS = {
-    'Homepage': 'bg-orange-500/80 text-white border-orange-400 shadow-[0_0_10px_rgba(255,165,0,0.3)]',
-    'Product Page': 'bg-blue-600/80 text-white border-blue-400 shadow-[0_0_10px_rgba(37,99,235,0.3)]',
-    'Product Listing Page': 'bg-teal-500/80 text-white border-teal-400 shadow-[0_0_10px_rgba(20,184,166,0.3)]',
-    'Checkout': 'bg-purple-600/80 text-white border-purple-400 shadow-[0_0_10px_rgba(147,51,234,0.3)]',
-    'Landing Page': 'bg-pink-600/80 text-white border-pink-400 shadow-[0_0_10px_rgba(219,39,119,0.3)]',
-    'Other': 'bg-gray-600/80 text-white border-gray-400 shadow-[0_0_10px_rgba(75,85,99,0.3)]'
+    'Homepage': 'bg-[#f97316] text-white border-[#fb923c] shadow-[0_2px_15px_rgba(249,115,22,0.4)]',
+    'Product Page': 'bg-[#2563eb] text-white border-[#60a5fa] shadow-[0_2px_15px_rgba(37,99,235,0.4)]',
+    'Product Listing Page': 'bg-[#059669] text-white border-[#34d399] shadow-[0_2px_15px_rgba(5,150,105,0.4)]',
+    'Checkout': 'bg-[#7c3aed] text-white border-[#a78bfa] shadow-[0_2px_15px_rgba(124,58,237,0.4)]',
+    'Landing Page': 'bg-[#db2777] text-white border-[#f472b6] shadow-[0_2px_15px_rgba(219,39,119,0.4)]',
+    'Other': 'bg-[#4b5563] text-white border-[#9ca3af] shadow-[0_2px_15px_rgba(75,85,99,0.4)]'
 };
 
 // Also keep status colors for the small badge/status indicator
@@ -34,10 +34,8 @@ const GanttChart = ({ data }) => {
 
     // Determine initial view date based on data
     const initialViewDate = useMemo(() => {
-        // PER USER REQUEST: Always fix visualization to TODAY (or relative to today)
-        // to see current state and what's coming. 
-        // Showing 2 months back from today gives good context.
-        return startOfMonth(addDays(today, -60));
+        // PER USER REQUEST: Show current month + 2 following months
+        return startOfMonth(today);
     }, []);
 
     const [viewDate, setViewDate] = useState(initialViewDate);
@@ -47,12 +45,16 @@ const GanttChart = ({ data }) => {
         setViewDate(initialViewDate);
     }, [initialViewDate]);
 
-    const monthsToShow = 6;
+    const monthsToShow = 4;
 
     const startDate = startOfMonth(viewDate);
-    const endDate = endOfMonth(addDays(startDate, monthsToShow * 30));
-    const totalDays = differenceInDays(endDate, startDate) + 1;
-    const months = eachMonthOfInterval({ start: startDate, end: endDate });
+    // Use exactly the number of months requested
+    const endDate = endOfMonth(addDays(startDate, (monthsToShow - 1) * 30.5)); // Approximation for end of the range
+    const months = eachMonthOfInterval({ start: startDate, end: endDate }).slice(0, monthsToShow);
+
+    // Recalculate endDate based on actual months shown to be precise
+    const actualEndDate = endOfMonth(months[months.length - 1]);
+    const totalDays = differenceInDays(actualEndDate, startDate) + 1;
 
     // Group Data by Page Type
     const groupedData = useMemo(() => {
@@ -74,7 +76,7 @@ const GanttChart = ({ data }) => {
             }
 
             // Only include if overlaps with view range
-            if (end < startDate || start > endDate) {
+            if (end < startDate || start > actualEndDate) {
                 return;
             }
 
@@ -98,11 +100,16 @@ const GanttChart = ({ data }) => {
             return a.localeCompare(b);
         });
 
+        if (import.meta.env.DEV) {
+            const upcoming = data.filter(d => d.startDate && d.startDate >= new Date('2026-02-01'));
+            console.log(`[Timeline] Items starting after Feb 1st: ${upcoming.length}`, upcoming.map(u => u.title));
+        }
+
         return sortedKeys.reduce((acc, key) => {
             acc[key] = groups[key].sort((a, b) => a.startDate - b.startDate);
             return acc;
         }, {});
-    }, [data, startDate, endDate]);
+    }, [data, startDate, actualEndDate]);
 
     const handleScroll = (direction) => {
         setViewDate(prev => addDays(prev, direction * 30));
@@ -117,7 +124,7 @@ const GanttChart = ({ data }) => {
                         <ChevronLeft size={20} />
                     </button>
                     <span className="text-white font-mono text-sm font-bold">
-                        {format(startDate, 'MMM yyyy')} - {format(endDate, 'MMM yyyy')}
+                        {format(startDate, 'MMM yyyy')} - {format(actualEndDate, 'MMM yyyy')}
                     </span>
                     <button onClick={() => handleScroll(1)} className="p-2 hover:bg-white/10 rounded-lg text-white transition-colors">
                         <ChevronRight size={20} />
@@ -186,7 +193,7 @@ const GanttChart = ({ data }) => {
                                     })}
 
                                     {/* Current Date Line */}
-                                    {today >= startDate && today <= endDate && (
+                                    {today >= startDate && today <= actualEndDate && (
                                         <div
                                             className="absolute top-0 bottom-0 w-0.5 bg-neon-pink z-10 shadow-[0_0_10px_rgba(255,0,60,0.5)] pointer-events-none"
                                             style={{ left: `${(differenceInDays(today, startDate) / totalDays) * 100}%` }}
@@ -226,34 +233,33 @@ const GanttChart = ({ data }) => {
                                                     key={item.id}
                                                     {...barProps}
                                                     className={`
-                                                        relative h-8 rounded-md flex items-center px-3 
+                                                        relative min-h-[52px] h-auto rounded-md flex flex-col justify-center px-2.5 py-1.5
                                                         ${item.url ? 'cursor-pointer hover:underline decoration-white/50 underline-offset-2' : 'cursor-default'} 
                                                         hover:z-50 transition-all duration-300
-                                                        group/bar hover:scale-[1.01] hover:shadow-lg
-                                                        border-l-4 ${getCategoryColor(item['Page Type'])}
-                                                        ${widthPct < 5 ? 'justify-center px-1' : ''}
+                                                        group/bar hover:scale-[1.01] hover:shadow-xl
+                                                        border border-white/10 border-l-4 ${getCategoryColor(item['Page Type'])}
                                                     `}
                                                     style={{
                                                         marginLeft: `${leftPct}%`,
                                                         width: `${widthPct}%`,
-                                                        minWidth: '4px'
+                                                        minWidth: '120px'
                                                     }}
                                                 >
-                                                    {widthPct > 2 && (
-                                                        <div className="flex flex-col overflow-hidden w-full">
-                                                            <div className="flex items-center justify-between gap-2 w-full">
-                                                                <span className="font-bold text-[11px] truncate text-white drop-shadow-md">
-                                                                    {item['Idea Code'] || item.id}
-                                                                    {widthPct > 12 && <span className="font-normal opacity-90 mx-1">- {item['Title'] || item.title}</span>}
-                                                                </span>
-                                                            </div>
-                                                            {widthPct > 12 && (
-                                                                <div className="text-[9px] opacity-80 uppercase tracking-wider truncate font-mono mt-[-2px]">
-                                                                    {marketDisplay || 'Global'}
-                                                                </div>
-                                                            )}
+                                                    <div className="flex flex-col w-full gap-0.5 leading-tight overflow-hidden">
+                                                        {/* Line 1: Code + Title matches reference exactly */}
+                                                        <div className="flex items-start gap-1 w-full text-[10.5px]">
+                                                            <span className="font-bold text-white shrink-0">
+                                                                {item['Idea Code'] || item.id}
+                                                            </span>
+                                                            <span className="text-white/95 font-medium truncate">
+                                                                - {item['Title'] || item.title}
+                                                            </span>
                                                         </div>
-                                                    )}
+                                                        {/* Line 2: Markets in small caps mono font */}
+                                                        <div className="text-[10px] font-bold tracking-tight text-white/90 truncate">
+                                                            {marketDisplay}
+                                                        </div>
+                                                    </div>
 
                                                     {/* Tooltip */}
                                                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/bar:block w-64 bg-[#0a0a0a] border border-white/20 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden animation-fade-in text-left">
